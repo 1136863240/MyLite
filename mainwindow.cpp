@@ -86,6 +86,7 @@ bool MainWindow::refreshList() {
         this->configureList = this->parseJsonDocument(doc);
         for (const DatabaseConfigure &dc : this->configureList) {
             this->connListWidget->addItem(
+                dc.serverType + "://" +
                 dc.serverIP + ":" +
                 dc.serverPort + "/" +
                 dc.userName);
@@ -120,6 +121,7 @@ QList<DatabaseConfigure> MainWindow::parseJsonDocument(const QJsonDocument &docu
     for (const QJsonValue &value : phonesArray) {
         DatabaseConfigure dc;
         QJsonObject o = value.toObject();
+        dc.serverType = o.value("type").toString();
         dc.serverIP = o.value("ip").toString();
         dc.serverPort = o.value("port").toString();
         dc.userName = o.value("username").toString();
@@ -164,6 +166,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
             QJsonArray all;
             for (const DatabaseConfigure &dc : this->configureList) {
                 QJsonObject item_o;
+                item_o["type"] = dc.serverType;
                 item_o["ip"] = dc.serverIP;
                 item_o["port"] = dc.serverPort;
                 item_o["username"] = dc.userName;

@@ -16,6 +16,7 @@ class ConnectDialog;
 }
 
 typedef struct DatabaseConfigure {
+    QString serverType;
     QString serverIP;
     QString serverPort;
     QString userName;

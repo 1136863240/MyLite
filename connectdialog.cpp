@@ -9,7 +9,7 @@ ConnectDialog::ConnectDialog(QWidget *parent)
     ui->setupUi(this);
 
     this->addButton = new HoButton(this);
-    this->addButton->setPosSize(10, 130, 381, 50);
+    this->addButton->setPosSize(10, 160, 381, 50);
     this->addButton->setBackgroundColor(QBrush(QColor(0, 255, 0)));
     this->addButton->setText("添加");
     this->addButton->setTextColor(QColor(255, 255, 255));
@@ -24,6 +24,7 @@ ConnectDialog::~ConnectDialog()
 }
 
 void ConnectDialog::save(int) {
+    QString type = this->ui->serverType->currentText();
     QString ip = this->ui->serverIP->text();
     QString port = this->ui->serverPort->text();
     QString username = this->ui->userName->text();
@@ -46,6 +47,7 @@ void ConnectDialog::save(int) {
     QJsonObject o;
     QJsonArray allArray = jsonObject.value("all").toArray();
     QJsonObject item_o;
+    item_o["type"] = type;
     item_o["ip"] = ip;
     item_o["port"] = port;
     item_o["username"] = username;
@@ -82,6 +84,7 @@ QList<DatabaseConfigure> ConnectDialog::parseJsonDocument(const QJsonDocument &d
     for (const QJsonValue &value : phonesArray) {
         DatabaseConfigure dc;
         QJsonObject o = value.toObject();
+        dc.serverType = o.value("type").toString();
         dc.serverIP = o.value("ip").toString();
         dc.serverPort = o.value("port").toString();
         dc.userName = o.value("username").toString();

@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     this->tabVec.append(new HoButton(this));
     this->tabVec[0]->setId(0);
-    this->tabVec[0]->setText("连接管理");
+    this->tabVec[0]->setText("添加连接");
     this->tabVec[0]->setTextFont(QFont("", 25));
     this->tabVec[0]->setTextColor(QColor(255, 255, 255));
     this->tabVec[0]->setBackgroundColor(QBrush(QColor(0, 255, 0)));

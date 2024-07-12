@@ -56,8 +56,13 @@ MainWindow::MainWindow(QWidget *parent)
     }
     this->connListWidget->setGeometry(0, 100, this->width() * 0.3, this->height() - 100);
     this->connListWidget->show();
+    this->connect(this->connListWidget, &QListWidget::itemDoubleClicked, this, &MainWindow::onConnectListDoubleClicked);
 
     this->connDialog = new ConnectDialog(this);
+
+    this->tableWidget = new QTableWidget(this);
+    this->tableWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.7, this->height() - 100);
+    this->tableWidget->show();
 }
 
 MainWindow::~MainWindow()
@@ -101,7 +106,7 @@ QJsonDocument MainWindow::parseJson(const QByteArray &jsonData) {
 
     if (parseError.error != QJsonParseError::NoError) {
         qWarning() << "JSON parse error:" << parseError.errorString();
-        exit(0);
+        return QJsonDocument();
     }
 
     return document;
@@ -152,8 +157,21 @@ void MainWindow::onConnectTabClicked(int id) {
     this->refreshList();
 }
 
+void MainWindow::onConnectListDoubleClicked(QListWidgetItem *item) {
+    Q_UNUSED(item);
+    int row = this->connListWidget->currentRow();
+    DatabaseConfigure dc = this->configureList.at(row);
+    if (dc.serverIP != this->currentDatabase.serverIP ||
+        dc.serverPort != this->currentDatabase.serverPort ||
+        dc.serverType != this->currentDatabase.serverType ||
+        dc.userName != this->currentDatabase.userName) {
+        this->currentDatabase = dc;
+    }
+}
+
 void MainWindow::resizeEvent(QResizeEvent *) {
     this->connListWidget->setGeometry(0, 100, this->width() * 0.3, this->height() - 100);
+    this->tableWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.7, this->height() - 100);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {

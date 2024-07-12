@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QVector>
 #include <QListWidget>
+#include <QListWidgetItem>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -12,6 +13,7 @@
 #include <QStringList>
 #include <QKeyEvent>
 #include <QList>
+#include <QTableWidget>
 #include "hobutton.h"
 #include "connectdialog.h"
 
@@ -37,6 +39,7 @@ private slots:
     void onTabMouseEnter(int id);
     void onTabMouseLeave(int id);
     void onConnectTabClicked(int id);
+    void onConnectListDoubleClicked(QListWidgetItem *item);
 
 private:
     QJsonDocument parseJson(const QByteArray &jsonData);
@@ -47,7 +50,9 @@ private:
     int tab;
     QVector<HoButton*> tabVec;
     QList<DatabaseConfigure> configureList;
+    DatabaseConfigure currentDatabase;
     QListWidget *connListWidget;
+    QTableWidget *tableWidget;
     ConnectDialog *connDialog;
 };
 #endif // MAINWINDOW_H

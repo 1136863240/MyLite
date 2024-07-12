@@ -13,13 +13,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     this->tabVec.append(new HoButton(this));
     this->tabVec[0]->setId(0);
-    this->tabVec[0]->setText("添加连接");
+    this->tabVec[0]->setText("连接");
     this->tabVec[0]->setTextFont(QFont("", 25));
     this->tabVec[0]->setTextColor(QColor(255, 255, 255));
     this->tabVec[0]->setBackgroundColor(QBrush(QColor(0, 255, 0)));
     this->tabVec[0]->setTextColor(QColor(0, 0, 0));
     this->tabVec[0]->setBackgroundColor(QBrush(QColor(255, 255, 255)));
-    this->tabVec[0]->setPosSize(0, 0, 200, 100);
+    this->tabVec[0]->setPosSize(0, 0, 100, 100);
     this->tabVec[0]->setRadius(20);
     this->tabVec[0]->show();
 
@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->tabVec[1]->setTextFont(QFont("", 25));
     this->tabVec[1]->setTextColor(QColor(255, 255, 255));
     this->tabVec[1]->setBackgroundColor(QBrush(QColor(0, 255, 0)));
-    this->tabVec[1]->setPosSize(200, 0, 100, 100);
+    this->tabVec[1]->setPosSize(100, 0, 100, 100);
     this->tabVec[1]->setRadius(20);
     this->tabVec[1]->show();
 
@@ -41,7 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->tabVec[2]->setTextFont(QFont("", 25));
     this->tabVec[2]->setTextColor(QColor(0, 0, 0));
     this->tabVec[2]->setBackgroundColor(QBrush(QColor(255, 255, 255)));
-    this->tabVec[2]->setPosSize(300, 0, 100, 100);
+    this->tabVec[2]->setPosSize(200, 0, 100, 100);
     this->tabVec[2]->setRadius(20);
     this->tabVec[2]->show();
 
@@ -51,6 +51,10 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     this->connListWidget = new QListWidget(this);
+    QFile _file(QApplication::applicationDirPath() + "/connect.txt");
+    if (_file.open(QIODevice::WriteOnly)) {
+        _file.close();
+    }
     if (!this->refreshList()) {
         exit(0);
     }
@@ -58,10 +62,14 @@ MainWindow::MainWindow(QWidget *parent)
     this->connListWidget->show();
     this->connect(this->connListWidget, &QListWidget::itemDoubleClicked, this, &MainWindow::onConnectListDoubleClicked);
 
+    this->databaseListWidget = new QListWidget(this);
+    this->databaseListWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.2, this->height() - 100);
+    this->databaseListWidget->show();
+
     this->connDialog = new ConnectDialog(this);
 
     this->tableWidget = new QTableWidget(this);
-    this->tableWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.7, this->height() - 100);
+    this->tableWidget->setGeometry(this->width() * 0.5, 100, this->width() * 0.5, this->height() - 100);
     this->tableWidget->show();
 }
 
@@ -131,6 +139,7 @@ QList<DatabaseConfigure> MainWindow::parseJsonDocument(const QJsonDocument &docu
         dc.serverPort = o.value("port").toString();
         dc.userName = o.value("username").toString();
         dc.userPassword = o.value("password").toString();
+        dc.databaseName = o.value("database").toString();
         list.append(dc);
     }
     return list;
@@ -166,12 +175,51 @@ void MainWindow::onConnectListDoubleClicked(QListWidgetItem *item) {
         dc.serverType != this->currentDatabase.serverType ||
         dc.userName != this->currentDatabase.userName) {
         this->currentDatabase = dc;
+        QSqlDatabase::removeDatabase("current");
+        if (dc.serverType == "MySQL") {
+            db = QSqlDatabase::addDatabase("QMYSQL", "current");
+            db.setHostName(dc.serverIP);
+            db.setPort(dc.serverPort.toInt());
+        } else if (dc.serverType == "SQLite3") {
+            db = QSqlDatabase::addDatabase("QSQLITE", "current");
+            db.setDatabaseName(dc.databaseName);
+            this->databaseListWidget->clear();
+            this->databaseListWidget->addItem(dc.databaseName);
+        } else {
+            QMessageBox::warning(this, "系统警告", "暂不支持该数据库驱动");
+            return;
+        }
+        if (!dc.userName.isEmpty()) {
+            if (!db.open(dc.userName, dc.userPassword)) {
+                QMessageBox::critical(this, "连接失败", db.lastError().text());
+                return;
+            }
+        } else {
+            if (!db.open()) {
+                QMessageBox::critical(this, "连接失败", db.lastError().text());
+                return;
+            }
+        }
+        if (dc.serverType == "MySQL") {
+            if (this->query.exec("SELECT `schema_name` FROM `INFORMATION_SCHEMA.SCHEMATA`;")) {
+                this->databaseListWidget->clear();
+                while (this->query.next()) {
+                    this->databaseListWidget->addItem(this->query.value(0).toString());
+                }
+            }
+        } else if (dc.serverType == "SQLite3") {
+            db = QSqlDatabase::addDatabase("QSQLITE", "current");
+            db.setDatabaseName(dc.databaseName);
+            this->databaseListWidget->clear();
+            this->databaseListWidget->addItem(dc.databaseName);
+        }
     }
 }
 
 void MainWindow::resizeEvent(QResizeEvent *) {
     this->connListWidget->setGeometry(0, 100, this->width() * 0.3, this->height() - 100);
-    this->tableWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.7, this->height() - 100);
+    this->databaseListWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.2, this->height() - 100);
+    this->tableWidget->setGeometry(this->width() * 0.5, 100, this->width() * 0.5, this->height() - 100);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -189,6 +237,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
                 item_o["port"] = dc.serverPort;
                 item_o["username"] = dc.userName;
                 item_o["password"] = dc.userPassword;
+                item_o["database"] = dc.databaseName;
                 all.append(item_o);
             }
             o["all"] = all;

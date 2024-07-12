@@ -14,6 +14,9 @@
 #include <QKeyEvent>
 #include <QList>
 #include <QTableWidget>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
 #include "hobutton.h"
 #include "connectdialog.h"
 
@@ -52,7 +55,10 @@ private:
     QList<DatabaseConfigure> configureList;
     DatabaseConfigure currentDatabase;
     QListWidget *connListWidget;
+    QListWidget *databaseListWidget;
     QTableWidget *tableWidget;
     ConnectDialog *connDialog;
+    QSqlDatabase db;
+    QSqlQuery query;
 };
 #endif // MAINWINDOW_H

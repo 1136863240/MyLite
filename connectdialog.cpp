@@ -9,12 +9,14 @@ ConnectDialog::ConnectDialog(QWidget *parent)
     ui->setupUi(this);
 
     this->addButton = new HoButton(this);
-    this->addButton->setPosSize(10, 160, 381, 50);
+    this->addButton->setPosSize(10, 190, 381, 50);
     this->addButton->setBackgroundColor(QBrush(QColor(0, 255, 0)));
     this->addButton->setText("添加");
     this->addButton->setTextColor(QColor(255, 255, 255));
     this->addButton->show();
     this->connect(this->addButton, &HoButton::onClick, this, &ConnectDialog::save);
+
+    this->connect(this->ui->serverType, &QComboBox::currentTextChanged, this, &ConnectDialog::changeType);
 }
 
 ConnectDialog::~ConnectDialog()
@@ -23,12 +25,21 @@ ConnectDialog::~ConnectDialog()
     delete ui;
 }
 
+void ConnectDialog::changeType(QString type) {
+    if (type == "MySQL") {
+        this->ui->databaseName->setEnabled(false);
+    } else if (type == "SQLite3") {
+        this->ui->databaseName->setEnabled(true);
+    }
+}
+
 void ConnectDialog::save(int) {
     QString type = this->ui->serverType->currentText();
     QString ip = this->ui->serverIP->text();
     QString port = this->ui->serverPort->text();
     QString username = this->ui->userName->text();
     QString password = this->ui->userPassword->text();
+    QString database = this->ui->databaseName->text();
     QFile file(QApplication::applicationDirPath() + "/connect.txt");
     if (!file.open(QIODevice::WriteOnly)) {
         QMessageBox::critical(this, "系统错误", "无法写入文件connect.txt");
@@ -52,6 +63,7 @@ void ConnectDialog::save(int) {
     item_o["port"] = port;
     item_o["username"] = username;
     item_o["password"] = password;
+    item_o["database"] = database;
     allArray.append(item_o);
     o["all"] = allArray;
     QJsonDocument doc(o);
@@ -89,6 +101,7 @@ QList<DatabaseConfigure> ConnectDialog::parseJsonDocument(const QJsonDocument &d
         dc.serverPort = o.value("port").toString();
         dc.userName = o.value("username").toString();
         dc.userPassword = o.value("password").toString();
+        dc.databaseName = o.value("database").toString();
         list.append(dc);
     }
     return list;

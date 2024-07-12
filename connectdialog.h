@@ -19,6 +19,7 @@ typedef struct DatabaseConfigure {
     QString serverType;
     QString serverIP;
     QString serverPort;
+    QString databaseName;
     QString userName;
     QString userPassword;
 } DatabaseConfigure;
@@ -33,6 +34,7 @@ public:
 
 private slots:
     void save(int);
+    void changeType(QString type);
 
 private:
     QJsonDocument parseJson(const QByteArray &jsonData);

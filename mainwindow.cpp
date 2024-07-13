@@ -272,32 +272,34 @@ void MainWindow::onTableListDoubleClicked(QListWidgetItem *item) {
             this->tableWidget->setHorizontalHeaderItem(column, titem);
             ++column;
         }
-        QString sql = "SELECT ";
-        bool isFirst = true;
-        for (const QString &columnName : columnList) {
-            if (isFirst) {
-                sql += "`" + columnName + "`";
-                isFirst = false;
-            } else {
-                sql += ", `" + columnName + "`";
-            }
-        }
-        sql += " FROM `" + item->text() + "` LIMIT 20;";
-        if (this->query.exec(sql)) {
-            int row = 0;
-            this->tableWidget->setRowCount(0);
-            while (this->query.next()) {
-                int col = 0;
-                this->tableWidget->insertRow(row);
-                for (const QString &colName : columnList) {
-                    this->tableWidget->setItem(row, col, new QTableWidgetItem(this->query.value(colName).toString()));
-                    ++col;
+        if (columnList.length() > 0) {
+            QString sql = "SELECT ";
+            bool isFirst = true;
+            for (const QString &columnName : columnList) {
+                if (isFirst) {
+                    sql += "`" + columnName + "`";
+                    isFirst = false;
+                } else {
+                    sql += ", `" + columnName + "`";
                 }
             }
-        } else {
-            qCritical() << this->db.lastError() << sql;
-            QMessageBox::critical(this, "执行失败", sql);
-            return;
+            sql += " FROM `" + item->text() + "` LIMIT 20;";
+            if (this->query.exec(sql)) {
+                int row = 0;
+                this->tableWidget->setRowCount(0);
+                while (this->query.next()) {
+                    int col = 0;
+                    this->tableWidget->insertRow(row);
+                    for (const QString &colName : columnList) {
+                        this->tableWidget->setItem(row, col, new QTableWidgetItem(this->query.value(colName).toString()));
+                        ++col;
+                    }
+                }
+            } else {
+                qCritical() << this->db.lastError() << sql;
+                QMessageBox::critical(this, "执行失败", sql);
+                return;
+            }
         }
     } else {
         qCritical() << this->db.lastError() << getColumnSql;

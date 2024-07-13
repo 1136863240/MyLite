@@ -52,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     this->connListWidget = new QListWidget(this);
     QFile _file(QApplication::applicationDirPath() + "/connect.txt");
-    if (_file.open(QIODevice::WriteOnly)) {
+    if (_file.open(QIODevice::Append)) {
         _file.close();
     }
     if (!this->refreshList()) {
@@ -62,9 +62,10 @@ MainWindow::MainWindow(QWidget *parent)
     this->connListWidget->show();
     this->connect(this->connListWidget, &QListWidget::itemDoubleClicked, this, &MainWindow::onConnectListDoubleClicked);
 
-    this->databaseListWidget = new QListWidget(this);
-    this->databaseListWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.2, this->height() - 100);
-    this->databaseListWidget->show();
+    this->tableListWidget = new QListWidget(this);
+    this->tableListWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.2, this->height() - 100);
+    this->tableListWidget->show();
+    this->connect(this->tableListWidget, &QListWidget::itemDoubleClicked, this, &MainWindow::onTableListDoubleClicked);
 
     this->connDialog = new ConnectDialog(this);
 
@@ -102,6 +103,7 @@ bool MainWindow::refreshList() {
                 dc.serverType + "://" +
                 dc.serverIP + ":" +
                 dc.serverPort + "/" +
+                dc.databaseName + "/" +
                 dc.userName);
         }
     }
@@ -173,52 +175,140 @@ void MainWindow::onConnectListDoubleClicked(QListWidgetItem *item) {
     if (dc.serverIP != this->currentDatabase.serverIP ||
         dc.serverPort != this->currentDatabase.serverPort ||
         dc.serverType != this->currentDatabase.serverType ||
+        dc.databaseName != this->currentDatabase.databaseName ||
         dc.userName != this->currentDatabase.userName) {
         this->currentDatabase = dc;
         QSqlDatabase::removeDatabase("current");
         if (dc.serverType == "MySQL") {
-            db = QSqlDatabase::addDatabase("QMYSQL", "current");
-            db.setHostName(dc.serverIP);
-            db.setPort(dc.serverPort.toInt());
+            this->db = QSqlDatabase::addDatabase("QMYSQL", "current");
+            this->db.setHostName(dc.serverIP);
+            this->db.setPort(dc.serverPort.toInt());
+            this->db.setDatabaseName(dc.databaseName);
         } else if (dc.serverType == "SQLite3") {
-            db = QSqlDatabase::addDatabase("QSQLITE", "current");
-            db.setDatabaseName(dc.databaseName);
-            this->databaseListWidget->clear();
-            this->databaseListWidget->addItem(dc.databaseName);
+            this->db = QSqlDatabase::addDatabase("QSQLITE", "current");
+            this->db.setDatabaseName(dc.databaseName);
+            this->tableListWidget->clear();
+            this->tableListWidget->addItem(dc.databaseName);
         } else {
             QMessageBox::warning(this, "系统警告", "暂不支持该数据库驱动");
             return;
         }
         if (!dc.userName.isEmpty()) {
-            if (!db.open(dc.userName, dc.userPassword)) {
-                QMessageBox::critical(this, "连接失败", db.lastError().text());
+            if (!this->db.open(dc.userName, dc.userPassword)) {
+                QMessageBox::critical(this, "连接失败", this->db.lastError().text());
                 return;
             }
         } else {
-            if (!db.open()) {
-                QMessageBox::critical(this, "连接失败", db.lastError().text());
+            if (!this->db.open()) {
+                QMessageBox::critical(this, "连接失败", this->db.lastError().text());
                 return;
             }
         }
         if (dc.serverType == "MySQL") {
-            if (this->query.exec("SELECT `schema_name` FROM `INFORMATION_SCHEMA.SCHEMATA`;")) {
-                this->databaseListWidget->clear();
+            this->query = QSqlQuery(this->db);
+            if (this->query.exec("SHOW TABLES;")) {
+                this->tableListWidget->clear();
                 while (this->query.next()) {
-                    this->databaseListWidget->addItem(this->query.value(0).toString());
+                    this->tableListWidget->addItem(this->query.value(0).toString());
                 }
             }
         } else if (dc.serverType == "SQLite3") {
-            db = QSqlDatabase::addDatabase("QSQLITE", "current");
-            db.setDatabaseName(dc.databaseName);
-            this->databaseListWidget->clear();
-            this->databaseListWidget->addItem(dc.databaseName);
+            this->query = QSqlQuery(this->db);
+            if (this->query.exec("SELECT `name` FROM `sqlite_master` WHERE `type` = 'table'")) {
+                this->tableListWidget->clear();
+                while (this->query.next()) {
+                    this->tableListWidget->addItem(this->query.value(0).toString());
+                }
+            }
         }
+        QSqlDatabase::removeDatabase("current");
+    }
+}
+
+void MainWindow::onTableListDoubleClicked(QListWidgetItem *item) {
+    Q_UNUSED(item);
+    QSqlDatabase::removeDatabase("current");
+    if (this->currentDatabase.serverType == "MySQL") {
+        this->db = QSqlDatabase::addDatabase("QMYSQL", "current");
+    } else if (this->currentDatabase.serverType == "SQLite3") {
+        this->db = QSqlDatabase::addDatabase("QSQLITE", "current");
+    } else {
+        QMessageBox::warning(this, "系统警告", "暂不支持该数据库驱动");
+        return;
+    }
+    this->db.setHostName(this->currentDatabase.serverIP);
+    this->db.setPort(this->currentDatabase.serverPort.toInt());
+    this->db.setDatabaseName(this->currentDatabase.databaseName);
+    if (!this->currentDatabase.userName.isEmpty()) {
+        if (!this->db.open(this->currentDatabase.userName, this->currentDatabase.userPassword)) {
+            QMessageBox::critical(this, "连接失败", this->db.lastError().text());
+            return;
+        }
+    } else {
+        if (!this->db.open()) {
+            QMessageBox::critical(this, "连接失败", this->db.lastError().text());
+            return;
+        }
+    }
+    this->query = QSqlQuery(this->db);
+    QString getColumnSql = "";
+    if (this->currentDatabase.serverType == "MySQL") {
+        getColumnSql = QString("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS`") +
+                       "WHERE `TABLE_NAME` = '" + item->text() + "' AND `TABLE_SCHEMA` = '" +
+                       this->currentDatabase.databaseName + "';";
+    } else if (this->currentDatabase.serverType == "SQLite3") {
+        getColumnSql = "SELECT `name` FROM pragma_table_info('" + item->text() + "');";
+    }
+    if (this->query.exec(getColumnSql)) {
+        this->tableWidget->clear();
+        this->tableWidget->setColumnCount(0);
+        int column = 0;
+        QStringList columnList;
+        while (this->query.next()) {
+            QString columnName = this->query.value(0).toString();
+            columnList << columnName;
+            this->tableWidget->insertColumn(column);
+            QTableWidgetItem *titem = new QTableWidgetItem(columnName);
+            this->tableWidget->setHorizontalHeaderItem(column, titem);
+            ++column;
+        }
+        QString sql = "SELECT ";
+        bool isFirst = true;
+        for (const QString &columnName : columnList) {
+            if (isFirst) {
+                sql += "`" + columnName + "`";
+                isFirst = false;
+            } else {
+                sql += ", `" + columnName + "`";
+            }
+        }
+        sql += " FROM `" + item->text() + "` LIMIT 20;";
+        if (this->query.exec(sql)) {
+            int row = 0;
+            this->tableWidget->setRowCount(0);
+            while (this->query.next()) {
+                int col = 0;
+                this->tableWidget->insertRow(row);
+                for (const QString &colName : columnList) {
+                    this->tableWidget->setItem(row, col, new QTableWidgetItem(this->query.value(colName).toString()));
+                    ++col;
+                }
+            }
+        } else {
+            qCritical() << this->db.lastError() << sql;
+            QMessageBox::critical(this, "执行失败", sql);
+            return;
+        }
+    } else {
+        qCritical() << this->db.lastError() << getColumnSql;
+        QMessageBox::critical(this, "执行失败", getColumnSql);
+        return;
     }
 }
 
 void MainWindow::resizeEvent(QResizeEvent *) {
     this->connListWidget->setGeometry(0, 100, this->width() * 0.3, this->height() - 100);
-    this->databaseListWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.2, this->height() - 100);
+    this->tableListWidget->setGeometry(this->width() * 0.3, 100, this->width() * 0.2, this->height() - 100);
     this->tableWidget->setGeometry(this->width() * 0.5, 100, this->width() * 0.5, this->height() - 100);
 }
 

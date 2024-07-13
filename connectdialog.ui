@@ -61,6 +61,9 @@
      <height>25</height>
     </rect>
    </property>
+   <property name="echoMode">
+    <enum>QLineEdit::Password</enum>
+   </property>
    <property name="placeholderText">
     <string>密码</string>
    </property>
@@ -87,7 +90,7 @@
   </widget>
   <widget class="QLineEdit" name="databaseName">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="geometry">
     <rect>
@@ -102,6 +105,14 @@
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>serverIP</tabstop>
+  <tabstop>serverPort</tabstop>
+  <tabstop>userName</tabstop>
+  <tabstop>userPassword</tabstop>
+  <tabstop>databaseName</tabstop>
+  <tabstop>serverType</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -1,6 +1,7 @@
 #include "connectdialog.h"
 #include "ui_connectdialog.h"
 #include <QMessageBox>
+#include <QDebug>
 
 ConnectDialog::ConnectDialog(QWidget *parent)
     : QDialog(parent)
@@ -15,7 +16,6 @@ ConnectDialog::ConnectDialog(QWidget *parent)
     this->addButton->setTextColor(QColor(255, 255, 255));
     this->addButton->show();
     this->connect(this->addButton, &HoButton::onClick, this, &ConnectDialog::save);
-
     this->connect(this->ui->serverType, &QComboBox::currentTextChanged, this, &ConnectDialog::changeType);
 }
 
@@ -23,14 +23,6 @@ ConnectDialog::~ConnectDialog()
 {
     delete this->addButton;
     delete ui;
-}
-
-void ConnectDialog::changeType(QString type) {
-    if (type == "MySQL") {
-        this->ui->databaseName->setEnabled(false);
-    } else if (type == "SQLite3") {
-        this->ui->databaseName->setEnabled(true);
-    }
 }
 
 void ConnectDialog::save(int) {
@@ -41,7 +33,7 @@ void ConnectDialog::save(int) {
     QString password = this->ui->userPassword->text();
     QString database = this->ui->databaseName->text();
     QFile file(QApplication::applicationDirPath() + "/connect.txt");
-    if (!file.open(QIODevice::WriteOnly)) {
+    if (!file.open(QIODevice::ReadWrite)) {
         QMessageBox::critical(this, "系统错误", "无法写入文件connect.txt");
         return;
     }
@@ -66,9 +58,20 @@ void ConnectDialog::save(int) {
     item_o["database"] = database;
     allArray.append(item_o);
     o["all"] = allArray;
+    qDebug() << allArray.size();
     QJsonDocument doc(o);
     this->writeJsonToFile(QApplication::applicationDirPath() + "/connect.txt", doc);
     this->close();
+}
+
+void ConnectDialog::changeType(const QString &type) {
+    if (type == "MySQL") {
+        this->ui->serverIP->setEnabled(true);
+        this->ui->serverPort->setEnabled(true);
+    } else if (type == "SQLite3") {
+        this->ui->serverIP->setEnabled(false);
+        this->ui->serverPort->setEnabled(false);
+    }
 }
 
 QJsonDocument ConnectDialog::parseJson(const QByteArray &jsonData) {
@@ -110,6 +113,7 @@ QList<DatabaseConfigure> ConnectDialog::parseJsonDocument(const QJsonDocument &d
 void ConnectDialog::writeJsonToFile(const QString &fileName, const QJsonDocument &document) {
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qDebug() << "file open failed";
         return;
     }
 

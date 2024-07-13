@@ -34,7 +34,7 @@ public:
 
 private slots:
     void save(int);
-    void changeType(QString type);
+    void changeType(const QString &type);
 
 private:
     QJsonDocument parseJson(const QByteArray &jsonData);

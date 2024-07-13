@@ -17,6 +17,7 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QHeaderView>
 #include "hobutton.h"
 #include "connectdialog.h"
 
@@ -43,6 +44,7 @@ private slots:
     void onTabMouseLeave(int id);
     void onConnectTabClicked(int id);
     void onConnectListDoubleClicked(QListWidgetItem *item);
+    void onTableListDoubleClicked(QListWidgetItem *item);
 
 private:
     QJsonDocument parseJson(const QByteArray &jsonData);
@@ -55,7 +57,7 @@ private:
     QList<DatabaseConfigure> configureList;
     DatabaseConfigure currentDatabase;
     QListWidget *connListWidget;
-    QListWidget *databaseListWidget;
+    QListWidget *tableListWidget;
     QTableWidget *tableWidget;
     ConnectDialog *connDialog;
     QSqlDatabase db;

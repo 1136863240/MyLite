@@ -4,3 +4,7 @@
 # 爱发电
 
 https://afdian.net/a/lh1136863240
+
+# 取消
+
+因Navicat Premium Lite免费，本项目取消
